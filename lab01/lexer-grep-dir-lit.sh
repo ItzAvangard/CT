@@ -2,7 +2,7 @@
 
 DIR="folly"
 
-REGEXP="\b(include|define|if|else|elif|error)\b"
+REGEXP="([#][a-zA-Z_]*)"
 
 for f in `find $DIR -name "*.cpp"`; do
     echo "*** File $f"

@@ -2,7 +2,7 @@
 
 DIR="folly"
 
-REGEXP="\b[-+]?[0-9]*\.?[0-9]*\b"
+REGEXP="\b[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?\b"
 
 for f in `find $DIR -name "*.cpp"`; do
     echo "*** File $f"

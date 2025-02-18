@@ -1,8 +1,8 @@
 #!/bin/sh
 
-DIR="folly"
+DIR="test"
 
-REGEXP="\b0[0-7']+('?[0-7]+)*\b"
+REGEXP="#(include)\b.*"
 
 for f in `find $DIR -name "*.cpp"`; do
     echo "*** File $f"

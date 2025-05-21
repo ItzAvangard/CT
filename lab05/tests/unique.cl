@@ -1,11 +1,11 @@
-class Main { 
+class A { 
 
 };
-class Main { 
+class A { 
 
 };
 
-(*class Main {
+(*class A {
     x : Int;
     x : String;
   
@@ -13,8 +13,8 @@ class Main {
     main() : String { "hello" };
 };*)
 
-(*class Main {
+(*class A {
     main(x : Int, x : String) : Int {
         1
     };
-};*)
+};

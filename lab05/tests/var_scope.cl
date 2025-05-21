@@ -1,11 +1,11 @@
-class Main
+class A
 { 
     main(): Int { 
       x + 1
     }; 
 };
 
-(*class Main
+(*class A
 { 
     main(): Int { 
     {

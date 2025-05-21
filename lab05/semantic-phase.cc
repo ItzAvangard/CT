@@ -182,6 +182,46 @@ void check_builtin_types_init(std::string type, Expression expr) {
   }
 }
 
+bool class_has_method(const std::string& class_name, const std::string& method_name, Classes all_classes) {
+    if (class_name == "Int" || class_name == "Bool" || class_name == "String") {
+        return false;
+    }
+
+    for (int i = all_classes->first(); all_classes->more(i); i = all_classes->next(i)) {
+        class__class* cls = dynamic_cast<class__class*>(all_classes->nth(i));
+        if (getName(cls) == class_name) {
+            Features feats = getFeatures(cls);
+            for (int j = feats->first(); feats->more(j); j = feats->next(j)) {
+                Feature f = feats->nth(j);
+                if (f->get_feature_type() == "method_class") {
+                    if (getName(f) == method_name) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+std::string get_method_return_type(const std::string& class_name, const std::string& method_name, Classes all_classes) {
+    for (int i = all_classes->first(); all_classes->more(i); i = all_classes->next(i)) {
+        class__class* cls = dynamic_cast<class__class*>(all_classes->nth(i));
+        if (getName(cls) == class_name) {
+            Features feats = getFeatures(cls);
+            for (int j = feats->first(); feats->more(j); j = feats->next(j)) {
+                Feature f = feats->nth(j);
+                if (f->get_feature_type() == "method_class") {
+                    if (getName(f) == method_name) {
+                        return getType(f);
+                    }
+                }
+            }
+        }
+    }
+    return "error";
+}
+
 // Checks the type of an expression
 void checkExpression(Expression expr, STable &attr_to_type,
                      STable &formal_to_type, SSet &classes_names,
@@ -248,8 +288,95 @@ void checkExpression(Expression expr, STable &attr_to_type,
     }
   } else if (expr_type == "dispatch_class") {
     Expression e = getExpression(expr);
+    if (!e) {
+      error("dispatch: calling expression is nullptr");
+      return;
+    }
     std::string method_name = getName(expr);
-
+    std::string caller_type;
+    if (e->get_expr_type() == "int_const_class") {
+        caller_type = "Int";
+        error("Class 'Int' has no method '" + method_name + "'");
+        return;
+    } else if (e->get_expr_type() == "bool_const_class") {
+        caller_type = "Bool";
+        error("Class 'Bool' has no method '" + method_name + "'");
+        return;
+    } else if (e->get_expr_type() == "string_const_class") {
+        caller_type = "String";
+        error("Class 'String' has no method '" + method_name + "'");
+        return;
+    } else if (e->get_expr_type() == "object_class") {
+        std::string var_name = getName(e);
+        if (var_name == "self") {
+            caller_type = "self";
+        } else if (attr_to_type.find(var_name) != attr_to_type.end()) {
+            caller_type = attr_to_type[var_name];
+        } else if (formal_to_type.find(var_name) != formal_to_type.end()) {
+            caller_type = formal_to_type[var_name];
+        } else {
+            error("variable '" + var_name + "' not defined in scope");
+            return;
+        }
+    } else {
+        checkExpression(e, attr_to_type, formal_to_type, classes_names, formals_names, classes_features);
+        if (e->get_expr_type() == "int_const_class") {
+            caller_type = "Int";
+            error("Class 'Int' has no method '" + method_name + "'");
+            return;
+        } else if (e->get_expr_type() == "bool_const_class") {
+            caller_type = "Bool";
+            error("Class 'Bool' has no method '" + method_name + "'");
+            return;
+        } else if (e->get_expr_type() == "string_const_class") {
+            caller_type = "String";
+            error("Class 'String' has no method '" + method_name + "'");
+            return;
+        } else if (e->get_expr_type() == "object_class") {
+            std::string var_name = getName(e);
+            if (var_name == "self") {
+                caller_type = "self";
+            } else if (attr_to_type.find(var_name) != attr_to_type.end()) {
+                caller_type = attr_to_type[var_name];
+            } else if (formal_to_type.find(var_name) != formal_to_type.end()) {
+                caller_type = formal_to_type[var_name];
+            } else {
+                caller_type = "Object";
+            }
+        } else {
+            caller_type = "Object";
+        }
+    }
+    bool method_found = false;
+    std::string current_type = caller_type;
+    while (!method_found && current_type != "Object") {
+        if (class_has_method(current_type, method_name, parse_results)) {
+            method_found = true;
+            break;
+        }
+        class__class* current_class = FindClass(current_type, parse_results);
+        if (current_class) {
+            current_type = getParentName(current_class);
+        } else {
+            break;
+        }
+    }
+    if (!method_found) {
+        error("Class '" + caller_type + "' has no method '" + method_name + "'");
+        return;
+    }
+    Expressions actuals = getExpressions(expr);
+    if (!actuals) {
+      return;
+    } else {
+      for (int i = actuals->first(); actuals->more(i); i = actuals->next(i)) {
+        if (!actuals->nth(i)) {
+          return;
+        } else {
+          checkExpression(actuals->nth(i), attr_to_type, formal_to_type, classes_names, formals_names, classes_features);
+        }
+      }
+    }
   } else if (expr_type == "neg_class") {
     Expression e = getExpression(expr);
     bool bool_const_check = e->get_expr_type() == "bool_const_class" || e->get_expr_type() == "lt_class" || e->get_expr_type() == "eq_class" || e->get_expr_type() == "leq_class";
@@ -518,18 +645,26 @@ int main(int argc, char **argv) {
         }
       }
 
-      // Check Main class and its main method
-      if (class_name == "Main" &&
-          features_names.find("main") == features_names.end()) {
-        semantic::error("Method 'main' in class 'Main' is not defined");
-      }
-
       classes_features[class_name] = features_types;
     }
 
-    // Check Main class existence
-    if (classes_names.find("Main") == classes_names.end()) {
-      semantic::error("class Main is not defined");
+    // Check if there is at least one class with main method
+    bool has_main_method = false;
+    for (int i = parse_results->first(); parse_results->more(i); i = parse_results->next(i)) {
+      class__class *current_class = dynamic_cast<class__class *>(parse_results->nth(i));
+      Features features = semantic::getFeatures(current_class);
+      for (int j = features->first(); features->more(j); j = features->next(j)) {
+        Feature current_feature = features->nth(j);
+        if (current_feature->get_feature_type() == "method_class" && 
+            semantic::getName(current_feature) == "main") {
+          has_main_method = true;
+          break;
+        }
+      }
+      if (has_main_method) break;
+    }
+    if (!has_main_method) {
+      semantic::error("no class with method 'main' found");
     }
 
     // Check inheritance hierarchy for cycles

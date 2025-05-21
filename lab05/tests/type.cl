@@ -1,15 +1,9 @@
 class A {
-    (*method1() : Int {
+    main() : Int {
         1 + "hello"
-  };*)
+  };
 
-    method2() : Int {
+    niam() : Int {
         2.fun()
   };
-};
-
-class Main {
-    main() : Int {
-        0
-    };
 };

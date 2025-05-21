@@ -320,6 +320,7 @@ public:
   void dump(std::ostream &stream, int n);
   friend class GetName;
   friend class GetType;
+  friend class GetExpression;
   void accept(Visitor &v) override { v.visit(*this); }
   std::string get_expr_type() override { return "static_dispatch_class"; }
 
@@ -347,6 +348,7 @@ public:
   Expression copy_Expression();
   void dump(std::ostream &stream, int n);
   friend class GetName;
+  friend class GetExpression;
   void accept(Visitor &v) override { v.visit(*this); }
   std::string get_expr_type() override { return "dispatch_class"; }
 
@@ -709,6 +711,9 @@ public:
   Expression copy_Expression();
   void dump(std::ostream &stream, int n);
 
+  friend class GetName;
+  void accept(Visitor &v) override { v.visit(*this); }
+
   std::string get_expr_type() override { return "int_const_class"; }
 
 #ifdef Expression_SHARED_EXTRAS
@@ -861,6 +866,7 @@ public:
   void visit(object_class &ref) override { name = std::string(ref.name->get_string()); }
   void visit(bool_const_class &ref) override { name = std::to_string(ref.val); }
   void visit(string_const_class &ref) override { name = std::string(ref.token->get_string()); }
+  void visit(int_const_class &ref) override { name = std::string(ref.token->get_string()); }
 };
 
 class GetFeatures : public Visitor {
@@ -920,6 +926,8 @@ public:
   void visit(let_class &ref) override { expr = ref.init; }
   void visit(neg_class &ref) override { expr = ref.e1; }
   void visit(cond_class &ref) override { expr = ref.pred; }
+  void visit(dispatch_class &ref) override { expr = ref.expr; }
+  void visit(static_dispatch_class &ref) override { expr = ref.expr; }
 };
 
 class GetExpressions : public Visitor {
